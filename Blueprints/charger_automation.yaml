@@ -1,0 +1,67 @@
+blueprint:
+  name: Charger Automation
+  domain: automation
+  description: Manages a charger based on battery level. Turns on the charger when the battery level is below a specified threshold and turns off the charger when the battery level is above a specified threshold.
+  author: Areppa
+  input:
+    charger_entity:
+      name: Charger Entity
+      description: Switch that controls the charger.
+      selector:
+        entity:
+          filter:
+            domain: switch
+    battery_entity:
+      name: Battery Entity
+      description: Sensor that provides the battery level.
+      selector:
+        entity:
+          filter:
+            domain: sensor
+    min_battery_level:
+      name: Minimum Battery Level
+      description: The minimum battery level that the charger will turn on at.
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: '%'
+    max_battery_level:
+      name: Maximum Battery Level
+      description: The maximum battery level that the charger will turn off at.
+      default: 75
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: '%'
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input battery_entity
+    above: !input max_battery_level
+    id: "above"
+    alias: "Battery Level Above Max"
+  - platform: numeric_state
+    entity_id: !input battery_entity
+    below: !input min_battery_level
+    id: "below"
+    alias: "Battery Level Below Min"
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "above"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input charger_entity
+      - conditions:
+          - condition: trigger
+            id: "below"
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input charger_entity
