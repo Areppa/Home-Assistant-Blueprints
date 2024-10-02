@@ -1,0 +1,61 @@
+blueprint:
+  name: Network Outage Light
+  domain: automation
+  description: Notifies about network outage with light. (notifications might not work properly without internet connection) This automation will remember the previous state of the light and restore it when the network is back.
+  author: Areppa
+  input:
+    network_monitor:
+      name: Network Monitor
+      description: Entity that turns off when the network is down.
+      selector:
+        entity:
+          filter:
+          - domain:
+            - binary_sensor
+    notify_light:
+      name: Notify Light
+      description: The light that will be used to notify about the network outage.
+      selector:
+        entity:
+          domain: light
+
+trigger:
+  - platform: state
+    entity_id: !input network_monitor
+    to: 'off'
+
+condition: []
+
+action:
+  - metadata: {}
+    data:
+      message: Network is down! Some automations might not work properly without internet connection.
+      title: Warning!
+      notification_id: network-not-available
+    action: persistent_notification.create
+  - data:
+      scene_id: network_outage_light_previous_state
+      snapshot_entities:
+        - !input notify_light
+    action: scene.create
+  - data:
+      rgb_color:
+        - 255
+        - 0
+        - 0
+    target:
+      entity_id: !input notify_light
+    action: light.turn_on
+  - wait_for_trigger:
+      - platform: state
+        entity_id:
+          - !input network_monitor
+        to: "on"
+  - data: {}
+    target:
+      entity_id: scene.network_outage_light_previous_state
+    action: scene.turn_on
+  - metadata: {}
+    data:
+      notification_id: network-not-available
+    action: persistent_notification.dismiss
